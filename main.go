@@ -24,12 +24,21 @@ var (
 	showVersion   bool
 )
 
-func init() {
-	flag.StringVar(&username, "username", os.Getenv("EASEE_USERNAME"), "Easee username")
-	flag.StringVar(&password, "password", os.Getenv("EASEE_PASSWORD"), "Easee password")
+// Credentials must not be flag defaults: flag prints defaults in its usage
+// output, which leaks the password on -help or any flag error. They are read
+// from the environment after parsing instead, so an explicit flag still wins.
+func parseFlags() {
+	flag.StringVar(&username, "username", "", "Easee username (defaults to $EASEE_USERNAME)")
+	flag.StringVar(&password, "password", "", "Easee password (defaults to $EASEE_PASSWORD)")
 	flag.StringVar(&listenAddress, "listen-address", ":8080", "Address to listen on for HTTP requests (defaults to :8080)")
 	flag.BoolVar(&showVersion, "version", false, "Print version information and exit")
 	flag.Parse()
+	if username == "" {
+		username = os.Getenv("EASEE_USERNAME")
+	}
+	if password == "" {
+		password = os.Getenv("EASEE_PASSWORD")
+	}
 }
 
 func exit(format string, v ...any) {
@@ -48,6 +57,7 @@ func updateChargerState(client *easee.Client, charger easee.Charger, collector *
 }
 
 func main() {
+	parseFlags()
 	if showVersion {
 		fmt.Printf("%s\n", version.Print("easee-exporter"))
 		os.Exit(0)
